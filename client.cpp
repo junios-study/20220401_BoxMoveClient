@@ -3,8 +3,13 @@
 #include "SDL.h"
 #include "MSGPacket.h"
 #include <WinSock2.h>
+#include <process.h>
 
 #pragma comment(lib, "ws2_32.lib")
+
+unsigned WINAPI RecvThread(void* args);
+
+HANDLE RecvThreadHandle;
 
 int SDL_main(int argc, char* argv[])
 {
@@ -23,6 +28,8 @@ int SDL_main(int argc, char* argv[])
 	char SendData[1024] = { 0, };
 
 	connect(ServerSocket, (SOCKADDR*)&ServerAddr, sizeof(ServerAddr));
+
+	RecvThreadHandle = (HANDLE)_beginthreadex(0, 0, RecvThread, (void*)&ServerSocket, 0, 0);
 
 	//code length  r   g   b
 	//[1]   [1]   [1] [1] [1]
@@ -97,6 +104,39 @@ int SDL_main(int argc, char* argv[])
 	closesocket(ServerSocket);
 
 	WSACleanup();
+
+	return 0;
+}
+
+unsigned __stdcall RecvThread(void* args)
+{
+	SOCKET ServerSocket = *(SOCKET*)(args);
+
+	char Header[2] = { 0, };
+
+	while (1)
+	{
+		int recvLength = recv(ServerSocket, Header, 2, 0);
+		if (recvLength <= 0)
+		{
+			break;
+		}
+		else
+		{
+			if ((UINT8)Header[0] == (UINT8)MSGPacket::LoginAck)
+			{
+				char Data[4] = { 0 };
+				int recvLength = recv(ServerSocket, Data, Header[1], 0);
+
+				unsigned int Number;
+				memcpy(&Number, Data, 4);
+
+				SDL_Log("LoginAck : %d, %u ", recvLength, Number);
+			}
+		}
+	}
+
+
 
 	return 0;
 }
