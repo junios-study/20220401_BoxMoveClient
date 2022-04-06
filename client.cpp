@@ -46,10 +46,12 @@ int SDL_main(int argc, char* argv[])
 	SOCKET ServerSocket;
 	ServerSocket = socket(AF_INET, SOCK_STREAM, 0);
 
+	HOSTENT* host = gethostbyname("work.junios.net");
+
 	SOCKADDR_IN ServerAddr;
 	memset(&ServerAddr, 0, sizeof(SOCKADDR));
 	ServerAddr.sin_family = PF_INET;
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ServerAddr.sin_addr.s_addr = *((ULONG*)(host->h_addr_list[0]));
 	ServerAddr.sin_port = htons(3000);
 
 	char SendData[1024] = { 0, };
