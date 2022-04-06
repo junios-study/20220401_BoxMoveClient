@@ -68,7 +68,7 @@ int SDL_main(int argc, char* argv[])
 	SDL_Log("%d\n", MyPlayerData.B);
 
 
-	int sendLength = send(ServerSocket, SendData, 15+2, 0);
+	int sendLength = send(ServerSocket, SendData, 15 + 2, 0);
 
 	bool bIsRunning = true;
 
@@ -91,23 +91,31 @@ int SDL_main(int argc, char* argv[])
 		case SDL_KEYDOWN:
 			switch (MyEvent.key.keysym.sym)
 			{
-				case SDLK_q:
+			case SDLK_q:
 			case SDLK_ESCAPE:
-					bIsRunning = false;
-					break;
-				case SDLK_LEFT:
-					PlayerList[0].X--;
-					break;
-				case SDLK_RIGHT:
-					PlayerList[0].X++;
-					break;
-				case SDLK_UP:
-					PlayerList[0].Y--;
-					break;
-				case SDLK_DOWN:
-					PlayerList[0].Y++;
-					break;
+				bIsRunning = false;
+				break;
+			case SDLK_LEFT:
+				PlayerList[0].X--;
+				break;
+			case SDLK_RIGHT:
+				PlayerList[0].X++;
+				break;
+			case SDLK_UP:
+				PlayerList[0].Y--;
+				break;
+			case SDLK_DOWN:
+				PlayerList[0].Y++;
+				break;
 			}
+
+			char SendData[20] = { 0, };
+			SendData[0] = (UINT8)MSGPacket::MovePlayer;
+			SendData[1] = 15;
+			PlayerList[0].MakePacket(&SendData[2]);
+			send(ServerSocket, SendData, 15 + 2, 0);
+			break;
+
 		}
 
 		SDL_SetRenderDrawColor(MyRenderer, 0xff, 0xff, 0xff, 0xff);
@@ -167,7 +175,7 @@ unsigned __stdcall RecvThread(void* args)
 
 				PlayerData NewPlayerData;
 				NewPlayerData.MakeData(Data);
-			
+
 				bool NewPlayerCheck = true;
 				for (int i = 0; i < (int)PlayerList.size(); ++i)
 				{
@@ -191,13 +199,32 @@ unsigned __stdcall RecvThread(void* args)
 
 				PlayerData DeletePlayerData;
 				DeletePlayerData.MakeData(Data);
-				
+
 				for (auto iter = PlayerList.begin(); iter != PlayerList.end(); ++iter)
 				{
 					if ((*iter).ClientSocket == DeletePlayerData.ClientSocket)
 					{
 						EnterCriticalSection(&ClientCriticalSection);
 						iter = PlayerList.erase(iter);
+						LeaveCriticalSection(&ClientCriticalSection);
+						break;
+					}
+				}
+			}
+			else if ((UINT8)Header[0] == (UINT8)MSGPacket::MovePlayer)
+			{
+				char Data[15] = { 0 };
+				int recvLength = recv(ServerSocket, Data, Header[1], 0);
+
+				PlayerData MovePlayerData;
+				MovePlayerData.MakeData(Data);
+				for (auto iter = PlayerList.begin(); iter != PlayerList.end(); ++iter)
+				{
+					if ((*iter).ClientSocket == MovePlayerData.ClientSocket)
+					{
+						EnterCriticalSection(&ClientCriticalSection);
+						SDL_Log("MovePlayer\n");
+						(*iter) = MovePlayerData;
 						LeaveCriticalSection(&ClientCriticalSection);
 						break;
 					}
