@@ -155,28 +155,35 @@ unsigned __stdcall RecvThread(void* args)
 		{
 			if ((UINT8)Header[0] == (UINT8)MSGPacket::LoginAck)
 			{
-				char Data[4] = { 0 };
+				char Data[15] = { 0 };
 				int recvLength = recv(ServerSocket, Data, Header[1], 0);
 
-				unsigned int Number;
-				memcpy(&Number, Data, 4);
-
-				SDL_Log("LoginAck\n");
+				PlayerList[0].MakeData(Data);
 			}
 			else if ((UINT8)Header[0] == (UINT8)MSGPacket::MakePlayer)
 			{
-				char Data[13] = { 0 };
+				char Data[15] = { 0 };
 				int recvLength = recv(ServerSocket, Data, Header[1], 0);
 
 				PlayerData NewPlayerData;
+				NewPlayerData.MakeData(Data);
+			
+				bool NewPlayerCheck = true;
+				for (int i = 0; i < (int)PlayerList.size(); ++i)
+				{
+					if (PlayerList[i].ClientSocket == NewPlayerData.ClientSocket)
+					{
+						NewPlayerCheck = false;
+						break;
+					}
+				}
 
-				NewPlayerData.R = (UINT8)Data[0];
-				NewPlayerData.G = (UINT8)Data[1];
-				NewPlayerData.B = (UINT8)Data[2];
-				NewPlayerData.X = (UINT32)Data[3];
-				NewPlayerData.Y = (UINT32)Data[7];
-				NewPlayerData.ClientSocket = (UINT32)Data[11];
-				//ConnectedPlayer[NewPlayerData.ClientSocket] = NewPlayerData;
+				if (NewPlayerCheck)
+				{
+					PlayerList.push_back(NewPlayerData);
+				}
+
+				
 
 				SDL_Log("MakePlayer\n");
 			}
