@@ -182,10 +182,26 @@ unsigned __stdcall RecvThread(void* args)
 				{
 					PlayerList.push_back(NewPlayerData);
 				}
-
-				
-
 				SDL_Log("MakePlayer\n");
+			}
+			else if ((UINT8)Header[0] == (UINT8)MSGPacket::DeletePlayer)
+			{
+				char Data[15] = { 0 };
+				int recvLength = recv(ServerSocket, Data, Header[1], 0);
+
+				PlayerData DeletePlayerData;
+				DeletePlayerData.MakeData(Data);
+				
+				for (auto iter = PlayerList.begin(); iter != PlayerList.end(); ++iter)
+				{
+					if ((*iter).ClientSocket == DeletePlayerData.ClientSocket)
+					{
+						EnterCriticalSection(&ClientCriticalSection);
+						iter = PlayerList.erase(iter);
+						LeaveCriticalSection(&ClientCriticalSection);
+						break;
+					}
+				}
 			}
 		}
 	}
